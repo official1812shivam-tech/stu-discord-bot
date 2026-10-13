@@ -70,7 +70,7 @@ class STUBot(commands.Bot):
 
     async def setup_hook(self):
         await self.tree.sync()
-        print("Slash commands synced successfully.")
+        print("Slash commands synced globally.")
 
     async def on_ready(self):
         print(f"Logged in as {self.user} (ID: {self.user.id})")
@@ -162,7 +162,7 @@ async def club(interaction: discord.Interaction, name: app_commands.Choice[str])
     await interaction.response.send_message(embed=embed)
 
 # ----------------------------------------------------
-# ADMIN COMMAND 3: /club-members-points (Admin Only)
+# ADMIN COMMAND 3: /club-point (Admin Only)
 # ----------------------------------------------------
 async def member_autocomplete(interaction: discord.Interaction, current: str):
     all_m = get_all_members()
@@ -171,14 +171,14 @@ async def member_autocomplete(interaction: discord.Interaction, current: str):
         for r_name, club_key in all_m if current.lower() in r_name.lower()
     ][:25]
 
-@bot.tree.command(name="club-members-points", description="Add or deduct points for a club member.")
+@bot.tree.command(name="club-point", description="Add or deduct points for a club member.")
 @app_commands.checks.has_permissions(administrator=True) # 🔒 ADMIN ONLY
 @app_commands.choices(action=[
     app_commands.Choice(name="➕ Add Points", value="add"),
     app_commands.Choice(name="➖ Deduct Points", value="deduct")
 ])
 @app_commands.autocomplete(member=member_autocomplete)
-async def club_members_points(interaction: discord.Interaction, action: app_commands.Choice[str], member: str, amount: int):
+async def club_point(interaction: discord.Interaction, action: app_commands.Choice[str], member: str, amount: int):
     target_club = None
     for key, c_data in clan_data["clubs"].items():
         if member in c_data["members"]:
@@ -209,7 +209,7 @@ async def club_members_points(interaction: discord.Interaction, action: app_comm
     await interaction.response.send_message(embed=embed)
 
 # ----------------------------------------------------
-# ADMIN COMMAND 4A: /club-member-add (Admin Only)
+# ADMIN COMMAND 4: /club-member-add (Admin Only)
 # ----------------------------------------------------
 @bot.tree.command(name="club-member-add", description="Add a new member to a club.")
 @app_commands.checks.has_permissions(administrator=True) # 🔒 ADMIN ONLY
@@ -237,62 +237,9 @@ async def club_member_add(interaction: discord.Interaction, club: app_commands.C
     await interaction.response.send_message(embed=embed)
 
 # ----------------------------------------------------
-# ADMIN COMMAND 4B: /club-member-remove (Admin Only)
-# ----------------------------------------------------
-class RemoveSelect(discord.ui.Select):
-    def __init__(self):
-        all_m = get_all_members()
-        options = [
-            discord.SelectOption(label=r_name, description=f"Club: {club_key}", value=f"{club_key}:{r_name}")
-            for r_name, club_key in all_m[:25]
-        ]
-        if not options:
-            options = [discord.SelectOption(label="No members available", value="none")]
-
-        super().__init__(placeholder="Select a member to remove...", min_values=1, max_values=1, options=options)
-
-    async def callback(self, interaction: discord.Interaction):
-        if self.values[0] == "none":
-            await interaction.response.send_message("No members to remove.", ephemeral=True)
-            return
-
-        club_key, r_name = self.values[0].split(":")
-        if r_name in clan_data["clubs"][club_key]["members"]:
-            del clan_data["clubs"][club_key]["members"][r_name]
-            save_data(clan_data)
-
-            embed = discord.Embed(
-                title="🗑️ Member Removed",
-                description=f"Successfully removed **{r_name}** from **{clan_data['clubs'][club_key]['title']}**.",
-                color=discord.Color.red()
-            )
-            await interaction.response.send_message(embed=embed)
-        else:
-            await interaction.response.send_message("Member not found.", ephemeral=True)
-
-class RemoveView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=60)
-        self.add_item(RemoveSelect())
-
-@bot.tree.command(name="club-member-remove", description="Select a member from a dropdown list to remove them.")
-@app_commands.checks.has_permissions(administrator=True) # 🔒 ADMIN ONLY
-async def club_member_remove(interaction: discord.Interaction):
-    if not get_all_members():
-        await interaction.response.send_message("⚠️ There are no members in any club to remove.", ephemeral=True)
-        return
-
-    embed = discord.Embed(
-        title="🔻 Remove Member",
-        description="Choose a member from the dropdown menu below to remove them from the clan rosters.",
-        color=discord.Color.dark_red()
-    )
-    await interaction.response.send_message(embed=embed, view=RemoveView(), ephemeral=True)
-
-# ----------------------------------------------------
 # RUN BOT
 # ----------------------------------------------------
-if __name__ == "__main__"
+if __name__ == "__main__":
     keep_alive()
     TOKEN = os.getenv("DISCORD_TOKEN")
     if TOKEN:
